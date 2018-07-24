@@ -1,5 +1,5 @@
 module Hint.Eval (
-      interpret, as, infer,
+      interpret, interpretQ, as, infer,
       unsafeInterpret,
       eval, runStmt,
       parens
@@ -10,7 +10,7 @@ import qualified GHC.Exts (unsafeCoerce#)
 import Control.Exception
 
 import Data.Typeable hiding (typeOf)
-import qualified Data.Typeable (typeOf)
+import qualified Data.Typeable (typeOf, typeRepTyCon, tyConModule)
 
 import Hint.Base
 import Hint.Context
@@ -31,7 +31,16 @@ infer = undefined
 
 -- | Evaluates an expression, given a witness for its monomorphic type.
 interpret :: (MonadInterpreter m, Typeable a) => String -> a -> m a
-interpret expr wit = unsafeInterpret expr (show $ Data.Typeable.typeOf wit)
+interpret expr wit = unsafeInterpret expr $ show $ Data.Typeable.typeOf wit
+
+-- | Evaluates an expression, given a witness for its monomorphic type.
+interpretQ :: (MonadInterpreter m, Typeable a) => String -> a -> m a
+interpretQ expr wit = unsafeInterpret expr $ moduleName ++ "." ++ typeName
+  where
+    witRep     = Data.Typeable.typeOf wit
+    typeName   = show witRep
+    moduleName = Data.Typeable.tyConModule $ Data.Typeable.typeRepTyCon witRep
+
 
 unsafeInterpret :: (MonadInterpreter m) => String -> String -> m a
 unsafeInterpret expr type_str =
